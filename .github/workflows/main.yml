@@ -1,0 +1,85 @@
+name: WARGA NUSANTARA RDP
+
+on:
+  workflow_dispatch:
+
+jobs:
+  windows-check:
+    name: Windows Environment Check
+    runs-on: windows-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Display System Information
+        shell: pwsh
+        run: |
+          Write-Host "=================================="
+          Write-Host " WARGA NUSANTARA RDP"
+          Write-Host " Windows Environment Check"
+          Write-Host "=================================="
+
+          Write-Host "Computer Name:"
+          $env:COMPUTERNAME
+
+          Write-Host "`nOperating System:"
+          Get-CimInstance Win32_OperatingSystem |
+            Select-Object Caption, Version, OSArchitecture
+
+          Write-Host "`nCurrent Time:"
+          Get-Date
+
+      - name: Check Remote Desktop Service
+        shell: pwsh
+        run: |
+          Write-Host "Checking Remote Desktop service..."
+
+          $service = Get-Service -Name TermService `
+            -ErrorAction SilentlyContinue
+
+          if ($service) {
+            Write-Host "Service: $($service.Name)"
+            Write-Host "Status: $($service.Status)"
+          } else {
+            Write-Host "Remote Desktop service was not found."
+          }
+
+      - name: Check Tailscale Installation
+        shell: pwsh
+        run: |
+          Write-Host "Checking Tailscale installation..."
+
+          $tsPath = "$env:ProgramFiles\Tailscale\tailscale.exe"
+
+          if (Test-Path $tsPath) {
+            Write-Host "Tailscale is installed."
+            & $tsPath version
+          } else {
+            Write-Host "Tailscale is not installed."
+            Write-Host "Install it on a device you control."
+          }
+
+      - name: Check Network Configuration
+        shell: pwsh
+        run: |
+          Write-Host "Checking network configuration..."
+
+          Get-NetIPConfiguration |
+            Select-Object InterfaceAlias,
+              IPv4Address,
+              IPv4DefaultGateway
+
+          Write-Host "`nChecking listening TCP ports..."
+
+          Get-NetTCPConnection -State Listen `
+            -ErrorAction SilentlyContinue |
+            Select-Object -First 20 LocalAddress,
+              LocalPort,
+              State
+
+      - name: Finish
+        shell: pwsh
+        run: |
+          Write-Host "=================================="
+          Write-Host "Environment check completed."
+          Write-Host "WARGA NUSANTARA RDP"
+          Write-Host "=================================="
